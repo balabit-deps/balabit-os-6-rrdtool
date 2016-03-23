@@ -1,0 +1,81 @@
+Description: Fixes for lua 5.2 version
+Author: Yolanda Robla <yolanda.robla@canonical.com>
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/lua5.2/+bug/1196921
+Reviewed-By: Jean-Michel Vourgère <nirgal@debian.org>
+Forwarded: https://github.com/oetiker/rrdtool-1.x/pull/660
+Applied-Upstream: commit:7af5f76227330504d4d16234488c1118d4409621
+Last-update: 2015-08-13
+
+Index: rrdtool/configure.ac
+===================================================================
+--- rrdtool.orig/configure.ac
++++ rrdtool/configure.ac
+@@ -813,8 +813,8 @@ LUA_EOF
+       LIBS=
+       lua_havelib=no
+       LUA_HAVE_COMPAT51=DONT_HAVE_COMPAT51
+-      AC_SEARCH_LIBS(lua_call, lua$lua_vdot lua$lua_vndot lua,
+-        [AC_SEARCH_LIBS(luaL_register, lua$lua_vdot lua$lua_vndot lua,
++      RRD_SEARCH_LIBS(lua_call, [#include <${lua_headerdir:+$lua_headerdir/}lua.h>], [0, 0, 0], lua$lua_vdot lua$lua_vndot lua,
++        [AC_SEARCH_LIBS(luaL_openlibs, lua$lua_vdot lua$lua_vndot lua,
+           [lua_havelib=LUA$lua_vndot],
+           [AC_SEARCH_LIBS(luaL_module, lualib$lua_vndot lualib$lua_vdot lualib,
+             [lua_havelib=$lua_vndot; $LUA -l compat-5.1 2>/dev/null;
+Index: rrdtool/m4/acinclude.m4
+===================================================================
+--- rrdtool.orig/m4/acinclude.m4
++++ rrdtool/m4/acinclude.m4
+@@ -612,3 +612,31 @@ AC_DEFUN([GC_TIMEZONE], [
+                 fi
+         fi
+ ])
++
++dnl Like AC_SEARCH_LIBS, but allowing specifying a prologue and arguments so
++dnl that macros expand correctly.
++AC_DEFUN([RRD_SEARCH_LIBS],
++[AS_VAR_PUSHDEF([rrd_Search], [rrd_cv_search_$1])dnl
++AC_CACHE_CHECK([for library containing $1], [rrd_Search],
++[rrd_func_search_save_LIBS=$LIBS
++AC_LANG_CONFTEST([AC_LANG_PROGRAM([$2], [$1 ($3);])])
++for rrd_lib in '' $4; do
++  if test -z "$rrd_lib"; then
++    rrd_res="none required"
++  else
++    rrd_res=-l$rrd_lib
++    LIBS="-l$rrd_lib $7 $rrd_func_search_save_LIBS"
++  fi
++  AC_LINK_IFELSE([], [AS_VAR_SET([rrd_Search], [$rrd_res])])
++  AS_VAR_SET_IF([rrd_Search], [break])
++done
++AS_VAR_SET_IF([rrd_Search], , [AS_VAR_SET([rrd_Search], [no])])
++rm conftest.$ac_ext
++LIBS=$rrd_func_search_save_LIBS])
++AS_VAR_COPY([rrd_res], [rrd_Search])
++AS_IF([test "$rrd_res" != no],
++  [test "$rrd_res" = "none required" || LIBS="$rrd_res $LIBS"
++  $5],
++      [$6])
++AS_VAR_POPDEF([rrd_Search])dnl
++])
+Index: rrdtool/bindings/lua/rrdlua.c
+===================================================================
+--- rrdtool.orig/bindings/lua/rrdlua.c
++++ rrdtool/bindings/lua/rrdlua.c
+@@ -350,7 +350,7 @@ set_info (lua_State * L)
+ 
+ /**********************************************************/
+ 
+-static const struct luaL_reg rrd[] = {
++static const struct luaL_Reg rrd[] = {
+   {"create", lua_rrd_create},
+   {"dump", lua_rrd_dump},
+   {"fetch", lua_rrd_fetch},
+@@ -383,7 +383,7 @@ luaopen_rrd (lua_State * L)
+   /* luaL_module is defined in compat-5.1.c */
+   luaL_module (L, "rrd", rrd, 0);
+ #else
+-  luaL_register (L, "rrd", rrd);
++  luaL_newlib (L, rrd);
+ #endif
+   set_info (L);
+   return 1;

@@ -1,0 +1,20 @@
+Description: Use memcpy on overlaping source/dest memory
+ This caused FTBFS on mips, with tun2 unit test failure.
+ Thanks to Niko Tyni.
+Author: Jean-Michel Vourgère <nirgal@debian.org>
+Bug-Debian: https://bugs.debian.org/805391
+Forwarded: https://github.com/oetiker/rrdtool-1.x/issues/688
+Last-Update: 2015-12-20
+
+--- rrdtool-1.5.5.orig/src/rrd_open.c
++++ rrdtool-1.5.5/src/rrd_open.c
+@@ -808,7 +808,8 @@ ssize_t rrd_write(
+         rrd_set_error("attempting to write beyond end of file (%ld + %ld > %ld)",rrd_file->pos, count, old_size);
+         return -1;
+     }
+-    memcpy(rrd_simple_file->file_start + rrd_file->pos, buf, count);
++    /* Don't use memcpy: */
++    memmove(rrd_simple_file->file_start + rrd_file->pos, buf, count);
+     rrd_file->pos += count;
+     return count;       /* mimmic write() semantics */
+ #else

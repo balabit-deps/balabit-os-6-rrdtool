@@ -1,0 +1,74 @@
+Description: Allow support for 390x format of nl_langinfo(FIRST_WEEKDAY)
+ nl_langinfo returns non-portable format for FIRST_WEEKDAY. See 
+ https://www.gnu.org/software/libc/manual/html_node/The-Elegant-and-Fast-Way.html#The-Elegant-and-Fast-Way
+ .
+ That patch adds support for the format used on 390x architecture.
+ This permits the unit tests to work and fixes FTBFS on several platforms.
+Author: Jean-Michel Vourgère <nirgal@debian.org>
+Forwarded: https://github.com/oetiker/rrdtool-1.x/pull/662
+Applied-Upstream: commit:e10fd700c325a0474f970ca293ad9d6508259922
+Last-Update: 2015-08-13
+
+Index: rrdtool/src/rrd_graph.c
+===================================================================
+--- rrdtool.orig/src/rrd_graph.c
++++ rrdtool/src/rrd_graph.c
+@@ -1499,8 +1499,18 @@ static int find_first_weekday(void){
+         first_weekday = nl_langinfo (_NL_TIME_FIRST_WEEKDAY)[0];
+         int week_1stday;
+         long week_1stday_l = (long) nl_langinfo (_NL_TIME_WEEK_1STDAY);
+-        if (week_1stday_l == 19971130) week_1stday = 0; /* Sun */
+-        else if (week_1stday_l == 19971201) week_1stday = 1; /* Mon */
++        if (week_1stday_l == 19971130
++#if SIZEOF_LONG_INT > 4
++            || week_1stday_l >> 32 == 19971130
++#endif
++           )
++            week_1stday = 0; /* Sun */
++        else if (week_1stday_l == 19971201
++#if SIZEOF_LONG_INT > 4
++           || week_1stday_l >> 32 == 19971201
++#endif
++           )
++            week_1stday = 1; /* Mon */
+         else
+         {
+             first_weekday = 1;
+Index: rrdtool/src/rrd_rpncalc.c
+===================================================================
+--- rrdtool.orig/src/rrd_rpncalc.c
++++ rrdtool/src/rrd_rpncalc.c
+@@ -512,8 +512,18 @@ static int find_first_weekday(void){
+         first_weekday = nl_langinfo (_NL_TIME_FIRST_WEEKDAY)[0];
+         int week_1stday;
+         long week_1stday_l = (long) nl_langinfo (_NL_TIME_WEEK_1STDAY);
+-        if (week_1stday_l == 19971130) week_1stday = 0; /* Sun */
+-        else if (week_1stday_l == 19971201) week_1stday = 1; /* Mon */
++        if (week_1stday_l == 19971130
++#if SIZEOF_LONG_INT > 4
++            || week_1stday_l >> 32 == 19971130
++#endif
++           )
++            week_1stday = 0; /* Sun */
++        else if (week_1stday_l == 19971201
++#if SIZEOF_LONG_INT > 4
++           || week_1stday_l >> 32 == 19971201
++#endif
++           )
++            week_1stday = 1; /* Mon */
+         else
+         {
+             first_weekday = 1;
+Index: rrdtool/configure.ac
+===================================================================
+--- rrdtool.orig/configure.ac
++++ rrdtool/configure.ac
+@@ -526,6 +526,8 @@ AC_LANG_POP(C)
+ dnl is time_t 32 of 64 bit ?
+ AC_CHECK_SIZEOF([time_t])
+ 
++AC_CHECK_SIZEOF([long int])
++
+ CONFIGURE_PART(Find 3rd-Party Libraries)
+ 
+ have_libdbi=no

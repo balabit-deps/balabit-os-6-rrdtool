@@ -1,0 +1,29 @@
+Description: Fixes FTBFS in make check when VERBOSE=1
+ tests/functions tools was setting RRDTOOL_V from RRDTOOL before RRDTOOL was
+ defined. This resulted in failure in tests.
+ That patch removes the VERBOSE support in tests.
+Author: Jean-Michel Vourgère <nirgal@debian.org>
+Bug: https://github.com/oetiker/rrdtool-1.x/issues/702
+Bug-Debian: https://bugs.debian.org/818156
+Forwarded: no
+Last-Update: 2016-03-23
+
+Index: rrdtool/tests/functions
+===================================================================
+--- rrdtool.orig/tests/functions
++++ rrdtool/tests/functions
+@@ -142,10 +142,10 @@ function exit_if_cached_running {
+         fi
+ }
+ 
+-if [ -n "$VERBOSE" ] ; then
+-	RRDTOOL_V="$RRDTOOL"
+-	RRDTOOL=verbose_rrdtool
+-fi
++#if [ -n "$VERBOSE" ] ; then
++#	RRDTOOL_V="$RRDTOOL"
++#	RRDTOOL=verbose_rrdtool
++#fi
+ 
+ if [ -z "$RRDTOOL" ] ; then 
+         RRDTOOL=$TOP_BUILDDIR/src/rrdtool

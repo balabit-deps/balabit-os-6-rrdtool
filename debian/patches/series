@@ -1,0 +1,8 @@
+reproducible-builds
+no-rpath-for-ruby
+breaks-long-man-lines
+lua5.2
+lua5.1
+390x_first_week_day
+mmap_memcpy_overlap
+tests_noverbose

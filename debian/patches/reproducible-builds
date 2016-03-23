@@ -1,0 +1,50 @@
+Description: Make builds byte for byte reproducible
+ .
+ Use the date from the changelog as the build date.
+Author: Jean-Michel Vourgère <nirgal@debian.org>
+Forwarded: no
+Last-Update: 2015-07-27
+
+Index: rrdtool/doc/Makefile.am
+===================================================================
+--- rrdtool.orig/doc/Makefile.am
++++ rrdtool/doc/Makefile.am
+@@ -56,10 +56,10 @@ all-local: link man txt html-local
+ 	perl -n -e 'if (/^=include\s+(\S+)/){open F,"$$1.inc" || die $$?;print <F>; close F} else {print}'  $<  > $@
+ 
+ .pod.1 .pm.1 .pl.1:
+-	$(AM_V_GEN)@POD2MAN@ --release=$(VERSION) --center=rrdtool $<  > $@
++	$(AM_V_GEN)@POD2MAN@ --date=${BUILD_DATE} --release=$(VERSION) --center=rrdtool $<  > $@
+ 
+ .pod.3:
+-	$(AM_V_GEN)@POD2MAN@ --release=$(VERSION) --center=rrdtool --section=3 $< > $@
++	$(AM_V_GEN)@POD2MAN@ --date=${BUILD_DATE} --release=$(VERSION) --center=rrdtool --section=3 $< > $@
+ 
+ .1.txt .3.txt:
+ 	$(AM_V_GEN)GROFF_NO_SGR=1 @NROFF@ -man -Tlp $< > $@
+Index: rrdtool/src/rrd_cgi.c
+===================================================================
+--- rrdtool.orig/src/rrd_cgi.c
++++ rrdtool/src/rrd_cgi.c
+@@ -701,7 +701,7 @@ char     *rrdgetinternal(
+         if (strcasecmp(args[0], "VERSION") == 0) {
+             return stralloc(PACKAGE_VERSION);
+         } else if (strcasecmp(args[0], "COMPILETIME") == 0) {
+-            return stralloc(__DATE__ " " __TIME__);
++            return stralloc(BUILD_DATE " " BUILD_TIME);
+         } else {
+             return stralloc("[ERROR: internal unknown argument]");
+         }
+Index: rrdtool/src/rrd_tool.c
+===================================================================
+--- rrdtool.orig/src/rrd_tool.c
++++ rrdtool/src/rrd_tool.c
+@@ -304,7 +304,7 @@ void PrintUsage(
+         else if (!strcmp(cmd, "pwd"))
+             help_cmd = C_PWD;
+     }
+-    fprintf(stdout, _(help_main), PACKAGE_VERSION, __DATE__, __TIME__);
++    fprintf(stdout, _(help_main), PACKAGE_VERSION, BUILD_DATE, BUILD_TIME);
+     fflush(stdout);
+     switch (help_cmd) {
+     case C_NONE:
